@@ -12,8 +12,8 @@ BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
 # Configuration
-REPO_OWNER="Trinity-Technical-Services-LLC"
-REPO_NAME="Proxmox_RockyLinux_GoldenImage"
+REPO_OWNER="shikhar-007"
+REPO_NAME="test-proxmox"
 
 echo -e "${BLUE}=== GitHub Secrets Setup Script ===${NC}"
 echo -e "${YELLOW}Repository: ${REPO_OWNER}/${REPO_NAME}${NC}"
@@ -79,14 +79,10 @@ set_secret "PROXMOX_PASSWORD" "Proxmox password"
 set_secret "PROXMOX_NODE" "Proxmox node name (e.g., tcnhq-prxmx01)"
 set_secret "SSH_PASSWORD" "SSH password for rocky user"
 
-# Production Environment Secrets
-echo -e "${BLUE}=== Production Environment Secrets ===${NC}"
-
-set_secret "PROXMOX_URL_PROD" "Production Proxmox API URL"
-set_secret "PROXMOX_USERNAME_PROD" "Production Proxmox username"
-set_secret "PROXMOX_PASSWORD_PROD" "Production Proxmox password"
-set_secret "PROXMOX_NODE_PROD" "Production Proxmox node name"
-set_secret "SSH_PASSWORD_PROD" "Production SSH password"
+# Production Environment Secrets - SKIPPED (Simplified Approach)
+echo -e "${YELLOW}=== Production Environment Secrets - SKIPPED ===${NC}"
+echo -e "${YELLOW}Using simplified configuration with single environment${NC}"
+echo ""
 
 # List all secrets
 echo -e "${BLUE}=== Current Secrets ===${NC}"
