@@ -81,7 +81,7 @@ jobs:
         packer build packer.pkr.hcl
 
     - name: Upload build logs
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       if: always()
       with:
         name: packer-logs
