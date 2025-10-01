@@ -39,6 +39,11 @@ jobs:
     - name: Setup Packer
       uses: hashicorp/setup-packer@main
 
+    - name: Initialize Packer plugins
+      run: |
+        cd milestone1-packer
+        packer init packer.pkr.hcl
+
     - name: Validate Packer configuration
       run: |
         cd milestone1-packer
@@ -54,6 +59,11 @@ jobs:
 
     - name: Setup Packer
       uses: hashicorp/setup-packer@main
+
+    - name: Initialize Packer plugins
+      run: |
+        cd milestone1-packer
+        packer init packer.pkr.hcl
 
     - name: Build VM from Template
       env:
