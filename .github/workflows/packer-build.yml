@@ -1,23 +1,28 @@
 name: Packer Build and Deploy
 
 on:
-  push:
-    branches: [ main ]
-    paths: [ 'milestone1-packer/**' ]
-  pull_request:
-    branches: [ main ]
-    paths: [ 'milestone1-packer/**' ]
   workflow_dispatch:
     inputs:
-      vm_name:
-        description: 'VM name (optional)'
-        required: false
+      proxmox_node:
+        description: 'Proxmox node name'
+        required: true
         type: string
+        default: 'tcnhq-prxmx01'
       vm_id:
         description: 'VM ID (0 for auto-assign)'
-        required: false
+        required: true
         type: string
-        default: '0'
+        default: '110'
+      vm_name:
+        description: 'VM name'
+        required: true
+        type: string
+        default: 'rocky-linux-test'
+      template_name:
+        description: 'Source template name'
+        required: true
+        type: string
+        default: 'rocky-linux-stig-manual'
 
 env:
   PACKER_LOG: 1
@@ -55,10 +60,11 @@ jobs:
         PACKER_VAR_proxmox_url: ${{ secrets.PROXMOX_URL }}
         PACKER_VAR_proxmox_username: ${{ secrets.PROXMOX_USERNAME }}
         PACKER_VAR_proxmox_password: ${{ secrets.PROXMOX_PASSWORD }}
-        PACKER_VAR_proxmox_node: ${{ secrets.PROXMOX_NODE }}
+        PACKER_VAR_proxmox_node: ${{ github.event.inputs.proxmox_node }}
+        PACKER_VAR_template_name: ${{ github.event.inputs.template_name }}
         PACKER_VAR_ssh_password: ${{ secrets.SSH_PASSWORD }}
-        PACKER_VAR_vm_id: ${{ github.event.inputs.vm_id || github.run_number }}
-        PACKER_VAR_vm_name: ${{ github.event.inputs.vm_name || format('rocky-linux-{0}', github.run_number) }}
+        PACKER_VAR_vm_id: ${{ github.event.inputs.vm_id }}
+        PACKER_VAR_vm_name: ${{ github.event.inputs.vm_name }}
         PACKER_VAR_build_id: ${{ github.run_id }}
       run: |
         cd milestone1-packer
@@ -82,8 +88,10 @@ jobs:
       run: |
         echo "✅ Packer build completed successfully!"
         echo "Build ID: ${{ github.run_id }}"
-        echo "VM ID: ${{ github.event.inputs.vm_id || github.run_number }}"
-        echo "VM Name: ${{ github.event.inputs.vm_name || format('rocky-linux-{0}', github.run_number) }}"
+        echo "Proxmox Node: ${{ github.event.inputs.proxmox_node }}"
+        echo "Template Name: ${{ github.event.inputs.template_name }}"
+        echo "VM ID: ${{ github.event.inputs.vm_id }}"
+        echo "VM Name: ${{ github.event.inputs.vm_name }}"
 
     - name: Notify Failure
       if: needs.build.result == 'failure'
