@@ -1,109 +1,137 @@
 # GitHub Secrets Setup Guide
 
-## 🔐 **Required GitHub Secrets**
+This guide walks you through configuring GitHub Secrets for the Packer build pipeline. These secrets allow GitHub Actions to securely connect to your Proxmox environment without exposing credentials in the codebase.
 
-This guide explains how to set up GitHub Secrets for the Packer build pipeline.
+## Required Secrets
 
-## 📋 **Secrets List**
+You'll need to configure five secrets in your GitHub repository. Here's what each one does:
 
-### **Required Secrets**
+| Secret Name | Description | Example Format |
+|-------------|-------------|----------------|
+| `PROXMOX_URL` | Proxmox API endpoint | `https://10.0.0.100:8006/api2/json` |
+| `PROXMOX_USERNAME` | Proxmox authentication username | `root@pam` |
+| `PROXMOX_PASSWORD` | Proxmox authentication password | Your secure password |
+| `PROXMOX_NODE` | Target Proxmox node name | `proxmox-node-01` |
+| `SSH_PASSWORD` | Rocky user SSH password | Minimum 15 characters (STIG requirement) |
 
-| Secret Name | Description | Example Value |
-|-------------|-------------|---------------|
-| `PROXMOX_URL` | Proxmox API URL | `https://YOUR_PROXMOX_IP:8006/api2/json` |
-| `PROXMOX_USERNAME` | Proxmox username | `root@pam` |
-| `PROXMOX_PASSWORD` | Proxmox password | `YOUR_PROXMOX_PASSWORD` |
-| `PROXMOX_NODE` | Proxmox node name | `your-node-name` |
-| `SSH_PASSWORD` | SSH password for rocky user | `YOUR_SSH_PASSWORD` |
+## Configuration Steps
 
-## 🛠️ **How to Set Up Secrets**
+### Step 1: Access Repository Settings
 
-### **Step 1: Navigate to Repository Settings**
+Navigate to your GitHub repository and access the secrets configuration:
 
-1. Go to your GitHub repository
-2. Click on **Settings** tab
-3. In the left sidebar, click **Secrets and variables** → **Actions**
+1. Open your repository at `https://github.com/Trinity-Technical-Services-LLC/Proxmox_RockyLinux_GoldenImage`
+2. Click the **Settings** tab
+3. In the left sidebar, expand **Secrets and variables**
+4. Select **Actions**
 
-### **Step 2: Add Secrets**
+### Step 2: Add Each Secret
 
-Click **"New repository secret"** and add each secret:
+Click **"New repository secret"** and configure each of the following:
 
-#### **PROXMOX_URL**
-- **Name**: `PROXMOX_URL`
-- **Secret**: Your Proxmox API URL (e.g., `https://10.0.0.100:8006/api2/json`)
+#### PROXMOX_URL
+```
+Name: PROXMOX_URL
+Value: https://YOUR_PROXMOX_IP:8006/api2/json
+```
+Use your Proxmox server's IP address or hostname. The URL must include `https://` and end with `/api2/json`.
 
-#### **PROXMOX_USERNAME**
-- **Name**: `PROXMOX_USERNAME`
-- **Secret**: Your Proxmox username (typically `root@pam`)
+#### PROXMOX_USERNAME
+```
+Name: PROXMOX_USERNAME
+Value: root@pam
+```
+Typically `root@pam` for full administrative access. If you've created a dedicated API user, use that instead.
 
-#### **PROXMOX_PASSWORD**
-- **Name**: `PROXMOX_PASSWORD`
-- **Secret**: Your Proxmox root password
+#### PROXMOX_PASSWORD
+```
+Name: PROXMOX_PASSWORD
+Value: (your actual Proxmox password)
+```
+This is the password for the username specified above. GitHub encrypts this value - it cannot be viewed once saved.
 
-#### **PROXMOX_NODE**
-- **Name**: `PROXMOX_NODE`
-- **Secret**: Your Proxmox node name (check in Proxmox web interface)
+#### PROXMOX_NODE
+```
+Name: PROXMOX_NODE
+Value: tcnhq-prxmx01
+```
+The name of your Proxmox node. You can find this in the Proxmox web interface under Datacenter. If you have multiple nodes, choose your primary deployment target.
 
-#### **SSH_PASSWORD**
-- **Name**: `SSH_PASSWORD`
-- **Secret**: Password for the `rocky` user in the VM (must be 15+ characters for STIG compliance)
+#### SSH_PASSWORD
+```
+Name: SSH_PASSWORD
+Value: (minimum 15 characters)
+```
+This password will be used for the rocky user on deployed VMs. Must be at least 15 characters to meet STIG security requirements.
 
-## 🚀 **How It Works**
+## How the Workflow Uses These Secrets
 
-### **Automatic Builds**
-- **Push to main branch** → Triggers automatic build
-- **Pull requests** → Validates configuration only
+Once configured, the GitHub Actions workflow uses these secrets to:
 
-### **Manual Builds**
-- Go to **Actions** → **Packer Build and Deploy** → **Run workflow**
-- Optionally specify:
-  - Proxmox node
-  - VM ID (0 for auto-assign)
-  - VM name
-  - Template name to clone from
+**Manual Workflow Execution:**
+- Navigate to the Actions tab
+- Select "Packer Build and Deploy"
+- Click "Run workflow"
+- Provide runtime parameters (node name, VM ID, VM name, template name)
+- Credentials are automatically loaded from GitHub Secrets
 
-### **Dynamic VM Naming**
-- **Automatic**: `rocky-linux-<VM_ID>`
-- **Manual**: Use your custom name
+**Automated Builds:**
+Currently disabled by default. When enabled, builds trigger automatically on repository pushes.
 
-## 🧪 **Testing**
+## Verifying Your Configuration
 
-### **Test with Manual Workflow**
-1. Go to **Actions** tab
-2. Click **"Packer Build and Deploy"**
+After adding all secrets, test the setup:
+
+1. Go to the **Actions** tab in your repository
+2. Select **"Packer Build and Deploy"** from the workflows list
 3. Click **"Run workflow"**
-4. Enter required parameters:
-   - Proxmox node name
-   - VM ID
-   - VM name
-   - Template name
-5. Click **"Run workflow"**
+4. Enter the following parameters:
+   - Node name: Your Proxmox node (e.g., `tcnhq-prxmx01`)
+   - VM ID: `110` or `0` for auto-assignment
+   - VM name: `test-vm` or your preferred name
+   - Template name: `rocky-linux-stig-manual`
+5. Click **"Run workflow"** and monitor the execution
 
-## ✅ **Verification Checklist**
+If the workflow fails with authentication errors, verify that:
+- All secret names are spelled correctly (they're case-sensitive)
+- Your Proxmox credentials work when logging in manually
+- GitHub can reach your Proxmox server (check firewall rules)
 
-- [ ] All 5 secrets added to GitHub
-- [ ] Secret names match exactly (case-sensitive)
-- [ ] Credentials tested manually in Proxmox
-- [ ] GitHub Actions workflow tested
-- [ ] Build logs show successful authentication
+## Security Considerations
 
-## 🔒 **Security Best Practices**
+**Best Practices:**
+- Never commit passwords or credentials to the repository
+- Rotate passwords regularly (at least quarterly)
+- Use strong, unique passwords for each environment
+- Review GitHub Actions logs periodically for suspicious activity
 
-1. **Never commit credentials** to the repository
-2. **Use GitHub Secrets** for all sensitive information
-3. **Rotate passwords** regularly
-4. **Use different passwords** for different environments (dev, staging, prod)
-5. **Limit GitHub Actions** to self-hosted runners on secure networks
-6. **Review access logs** regularly in Proxmox
+**Network Security:**
+If your Proxmox server is behind a firewall, you'll need either:
+- Firewall rules allowing GitHub's IP ranges (changes frequently)
+- A self-hosted GitHub runner on your local network (recommended)
 
-## 📝 **Notes**
+See `.github/SELF_HOSTED_RUNNER.md` for instructions on setting up a self-hosted runner.
 
-- All secrets are encrypted by GitHub
-- Secrets are never exposed in logs or outputs
-- Only GitHub Actions workflows can access these secrets
-- You can update secrets anytime without changing code
+## Troubleshooting
+
+**Secret names are case-sensitive**
+Ensure you've typed the names exactly as shown: `PROXMOX_URL`, not `proxmox_url`.
+
+**Connection timeout errors**
+If workflows fail with connection timeouts, your Proxmox server may not be accessible from GitHub's servers. Consider using a self-hosted runner.
+
+**Authentication failures**
+Verify your credentials by logging into Proxmox manually. Ensure you're using the correct username format (`root@pam`, not just `root`).
+
+**STIG password policy violations**
+The SSH password must be at least 15 characters. Use a mix of uppercase, lowercase, numbers, and special characters.
+
+## Additional Resources
+
+- **Main README**: `../README.md` - Project overview and quick start
+- **Self-Hosted Runner Guide**: `SELF_HOSTED_RUNNER.md` - Local runner setup
+- **Packer Configuration**: `../milestone1-packer/CONFIGURATION.md` - Detailed Packer setup
 
 ---
 
-**⚠️ IMPORTANT: Never share or commit actual passwords. This file contains examples only. Replace with your actual values in GitHub Secrets.**
-
+**Important**: GitHub Secrets are encrypted and secure. Once saved, secret values cannot be viewed - only updated or deleted. This ensures your credentials remain protected even from repository administrators.

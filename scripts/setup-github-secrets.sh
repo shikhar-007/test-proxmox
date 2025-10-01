@@ -12,8 +12,8 @@ BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
 # Configuration
-REPO_OWNER="shikhar-007"
-REPO_NAME="test-proxmox"
+REPO_OWNER="Trinity-Technical-Services-LLC"
+REPO_NAME="Proxmox_RockyLinux_GoldenImage"
 
 echo -e "${BLUE}=== GitHub Secrets Setup Script ===${NC}"
 echo -e "${YELLOW}Repository: ${REPO_OWNER}/${REPO_NAME}${NC}"

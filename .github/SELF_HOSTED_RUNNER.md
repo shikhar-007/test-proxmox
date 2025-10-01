@@ -1,157 +1,341 @@
 # Self-Hosted GitHub Runner Setup
 
-## 🎯 **Why Self-Hosted Runner?**
+## Why You Need This
 
-GitHub Actions cloud runners **cannot access your Proxmox server** because it's on a private network. A self-hosted runner solves this by running on a machine that has access to Proxmox.
+If your Proxmox server is on a private network (and it probably is for security reasons), GitHub's cloud-hosted runners can't reach it. The solution is to set up a self-hosted runner - essentially a machine on your local network that GitHub can talk to, which can then talk to your Proxmox server.
 
-## 📋 **Prerequisites**
+Think of it as a bridge between GitHub and your internal infrastructure.
 
-- A Linux machine (Ubuntu, Rocky Linux, etc.) that can access Proxmox
-- Network access to Proxmox API (port 8006)
-- Packer installed on the runner machine
-- Git installed on the runner machine
+## Prerequisites
 
-## 🚀 **Setup Steps**
+Before you start, you'll need:
 
-### **Step 1: Prepare Runner Machine**
+- A Linux machine with network access to your Proxmox server
+- Ability to reach the Proxmox API (port 8006)
+- Root or sudo access on the runner machine
+- About 15 minutes to set everything up
 
-You can use:
-- A VM on Proxmox itself
-- A machine in the same network as Proxmox
-- The Proxmox host itself (if secure)
+**Supported Operating Systems:**
+- Rocky Linux 8 or 9
+- Ubuntu 20.04 or 22.04
+- Debian 11 or 12
+- Any modern Linux distribution
 
-**Install prerequisites:**
+## Choosing a Runner Machine
+
+You have several options for where to host your runner:
+
+**Option 1: Dedicated VM on Proxmox** (Recommended)
+- Pros: Isolated, secure, easy to manage
+- Cons: Uses some resources on your Proxmox host
+- Best for: Production environments
+
+**Option 2: Existing Server on Same Network**
+- Pros: No additional VM needed
+- Cons: Shares resources with other services
+- Best for: Testing or small deployments
+
+**Option 3: Proxmox Host Itself**
+- Pros: Direct access, no network hops
+- Cons: Potential security concerns, requires careful setup
+- Best for: Lab environments only (not recommended for production)
+
+## Installation Steps
+
+### Step 1: Prepare Your Runner Machine
+
+Install the required software on your chosen machine.
+
+**For Rocky Linux / CentOS / RHEL:**
 ```bash
-# Update system
-sudo dnf update -y  # Rocky Linux
-# or
-sudo apt update && sudo apt upgrade -y  # Ubuntu
+# Update the system
+sudo dnf update -y
 
-# Install required packages
-sudo dnf install -y git curl wget  # Rocky Linux
-# or
-sudo apt install -y git curl wget  # Ubuntu
+# Install prerequisites
+sudo dnf install -y git curl wget unzip
 
 # Install Packer
+cd /tmp
 wget https://releases.hashicorp.com/packer/1.10.3/packer_1.10.3_linux_amd64.zip
 unzip packer_1.10.3_linux_amd64.zip
 sudo mv packer /usr/local/bin/
+sudo chmod +x /usr/local/bin/packer
+
+# Verify installation
 packer version
 ```
 
-### **Step 2: Add Runner to GitHub Repository**
-
-1. **Go to**: https://github.com/shikhar-007/test-proxmox/settings/actions/runners
-2. **Click**: "New self-hosted runner"
-3. **Select**: Linux
-4. **Follow the instructions** shown on the page
-
-You'll see commands like:
+**For Ubuntu / Debian:**
 ```bash
-# Download runner
+# Update the system
+sudo apt update && sudo apt upgrade -y
+
+# Install prerequisites
+sudo apt install -y git curl wget unzip
+
+# Install Packer
+cd /tmp
+wget https://releases.hashicorp.com/packer/1.10.3/packer_1.10.3_linux_amd64.zip
+unzip packer_1.10.3_linux_amd64.zip
+sudo mv packer /usr/local/bin/
+sudo chmod +x /usr/local/bin/packer
+
+# Verify installation
+packer version
+```
+
+### Step 2: Register the Runner with GitHub
+
+Now you need to connect your runner to your GitHub repository.
+
+1. **Navigate to your repository settings**:
+   - Go to your GitHub repository
+   - Click **Settings** tab
+   - In the left sidebar, click **Actions** → **Runners**
+
+2. **Add a new runner**:
+   - Click the **New self-hosted runner** button
+   - Select **Linux** as the operating system
+   - Select **x64** as the architecture
+
+3. **Follow the provided commands**:
+
+GitHub will show you custom commands with a unique token. They'll look something like this:
+
+```bash
+# Create a directory for the runner
 mkdir actions-runner && cd actions-runner
-curl -o actions-runner-linux-x64-2.319.0.tar.gz -L https://github.com/actions/runner/releases/download/v2.319.0/actions-runner-linux-x64-2.319.0.tar.gz
+
+# Download the latest runner package
+curl -o actions-runner-linux-x64-2.319.0.tar.gz -L \
+  https://github.com/actions/runner/releases/download/v2.319.0/actions-runner-linux-x64-2.319.0.tar.gz
+
+# Extract the package
 tar xzf ./actions-runner-linux-x64-2.319.0.tar.gz
 
-# Configure runner
-./config.sh --url https://github.com/shikhar-007/test-proxmox --token YOUR_TOKEN
+# Configure the runner
+./config.sh --url https://github.com/YOUR_ORG/YOUR_REPO --token YOUR_UNIQUE_TOKEN
 
-# Run the runner
+# Test the runner (optional)
 ./run.sh
 ```
 
-### **Step 3: Configure Runner as Service**
+**Important**: Use the exact commands GitHub shows you, as they include your specific repository URL and authentication token.
+
+### Step 3: Configure as a System Service
+
+Running the runner as a service ensures it starts automatically and keeps running even after you log out.
 
 ```bash
-# Install runner as systemd service
+# Install as a systemd service
 sudo ./svc.sh install
 
 # Start the service
 sudo ./svc.sh start
 
-# Check status
+# Verify it's running
 sudo ./svc.sh status
+
+# Enable automatic startup on boot
+sudo systemctl enable actions.runner.*
 ```
 
-### **Step 4: Verify Runner is Online**
+### Step 4: Verify the Runner
 
-1. **Go to**: https://github.com/shikhar-007/test-proxmox/settings/actions/runners
-2. **Check**: Runner shows as "Idle" (green circle)
-3. **Verify**: Runner name appears in the list
+Check that your runner is properly connected:
 
-## 🧪 **Testing the Self-Hosted Runner**
+1. Go back to the Runners page in GitHub Settings
+2. You should see your runner listed with a green "Idle" status
+3. The runner name will be the hostname of your machine by default
 
-### **Step 1: Trigger Workflow**
+**Troubleshooting**: If the runner shows as "Offline":
+- Check the service status: `sudo ./svc.sh status`
+- Review logs: `journalctl -u actions.runner.* -f`
+- Verify network connectivity to GitHub
 
-1. Go to **Actions** → **Packer Build and Deploy**
-2. Click **Run workflow**
-3. The workflow will now run on your self-hosted runner
+## Testing Your Runner
 
-### **Step 2: Monitor Execution**
+Now let's make sure the runner can actually reach your Proxmox server.
 
-Watch the workflow progress:
-- Runs on your self-hosted runner
-- Has access to Proxmox network
-- Can connect to Proxmox API
-- Successfully deploys VMs
+### Test 1: Network Connectivity
 
-## 📊 **Expected Results**
-
-✅ **Workflow runs on self-hosted runner**  
-✅ **Connects to Proxmox successfully**  
-✅ **Deploys VM from template**  
-✅ **All steps complete successfully**  
-
-## 🐛 **Troubleshooting**
-
-### **Runner Not Showing Up**
 ```bash
-# Check runner service status
-sudo systemctl status actions.runner.shikhar-007-test-proxmox.*
+# Test Proxmox API access
+curl -k https://YOUR_PROXMOX_IP:8006/api2/json/version
 
-# Check runner logs
-journalctl -u actions.runner.shikhar-007-test-proxmox.* -f
+# You should see JSON output with version information
 ```
 
-### **Runner Offline**
-```bash
-# Restart runner service
-sudo ./svc.sh restart
+### Test 2: Packer Access
 
-# Or manually run
-./run.sh
+```bash
+# Try initializing Packer
+cd /path/to/your/packer/config
+packer init packer.pkr.hcl
+
+# Should download plugins successfully
 ```
 
-### **Permission Issues**
+### Test 3: Run a Workflow
+
+Trigger a workflow in GitHub Actions and watch it execute on your runner:
+
+1. Go to the **Actions** tab in your repository
+2. Select **"Packer Build and Deploy"**
+3. Click **"Run workflow"**
+4. Provide the parameters
+5. Watch the job - it should run on your self-hosted runner
+
+## Security Considerations
+
+### Runner Machine Security
+
+**Best Practices:**
+- Keep the runner OS updated regularly
+- Use a dedicated user account (not root) for the runner service
+- Implement firewall rules to restrict access
+- Monitor runner logs for suspicious activity
+
+**Firewall Configuration:**
 ```bash
-# Ensure proper permissions
-chown -R runner:runner ~/actions-runner
+# Allow outbound connections to GitHub (port 443)
+# Allow connections to Proxmox (port 8006)
+# Block everything else unless specifically needed
+
+# Example for firewalld (Rocky Linux)
+sudo firewall-cmd --permanent --add-rich-rule='rule family="ipv4" destination address="YOUR_PROXMOX_IP" port port="8006" protocol="tcp" accept'
+sudo firewall-cmd --reload
 ```
 
-## 🔒 **Security Considerations**
+### Network Security
 
-- Use a dedicated runner machine (don't use Proxmox host)
-- Keep runner machine updated
-- Use minimal permissions
-- Monitor runner logs regularly
-- Rotate runner tokens periodically
+- Place the runner on a management VLAN if possible
+- Don't expose the runner to the internet
+- Use VPN access for remote management
+- Implement network segmentation
 
-## 📚 **Alternative: Use Proxmox Host as Runner**
+### Access Control
 
-If secure enough, you can use the Proxmox host itself:
+- Limit who can trigger workflows in GitHub
+- Use repository secrets for all credentials
+- Rotate secrets regularly
+- Monitor GitHub Actions usage
+
+## Maintenance
+
+### Updating the Runner
+
+GitHub releases new runner versions regularly. To update:
 
 ```bash
-# On Proxmox host
-cd /opt
-mkdir actions-runner && cd actions-runner
+# Stop the service
+sudo ./svc.sh stop
 
-# Download and configure runner (follow GitHub instructions)
+# Navigate to the actions-runner directory
+cd ~/actions-runner
 
-# Run as service
-sudo ./svc.sh install
+# Download and extract the new version
+# (Get the URL from GitHub's runner download page)
+
+# Start the service
 sudo ./svc.sh start
 ```
 
+### Monitoring
+
+Check your runner's health regularly:
+
+```bash
+# Check service status
+sudo ./svc.sh status
+
+# View recent logs
+journalctl -u actions.runner.* --since "1 hour ago"
+
+# Check resource usage
+top -p $(pgrep Runner.Listener)
+```
+
+### Troubleshooting Common Issues
+
+**Runner goes offline unexpectedly:**
+```bash
+# Check logs
+journalctl -u actions.runner.* -n 100
+
+# Restart the service
+sudo ./svc.sh stop
+sudo ./svc.sh start
+```
+
+**Workflows fail with connection errors:**
+```bash
+# Test Proxmox connectivity from runner
+curl -k https://YOUR_PROXMOX_IP:8006/api2/json/version
+
+# Check firewall rules
+sudo firewall-cmd --list-all
+```
+
+**Packer fails to download plugins:**
+```bash
+# Verify internet connectivity
+ping -c 3 releases.hashicorp.com
+
+# Check proxy settings if applicable
+echo $HTTP_PROXY
+echo $HTTPS_PROXY
+```
+
+## Multiple Runners
+
+You can set up multiple runners for redundancy or load distribution:
+
+1. Follow the same setup process on additional machines
+2. Give each runner a unique name during configuration
+3. GitHub will distribute jobs across available runners
+4. Useful for high-availability setups
+
+## Cleanup
+
+If you need to remove a runner:
+
+```bash
+# Stop the service
+sudo ./svc.sh stop
+
+# Uninstall the service
+sudo ./svc.sh uninstall
+
+# Remove the runner from GitHub
+./config.sh remove --token YOUR_REMOVAL_TOKEN
+
+# Delete the runner directory
+cd ..
+rm -rf actions-runner
+```
+
+Then remove it from GitHub's runner list in the repository settings.
+
+## Additional Resources
+
+- [GitHub Actions Runner Documentation](https://docs.github.com/en/actions/hosting-your-own-runners)
+- [Proxmox VE API Documentation](https://pve.proxmox.com/pve-docs/api-viewer/)
+- [Packer Documentation](https://www.packer.io/docs)
+
+## Success Checklist
+
+Before considering your runner fully operational:
+
+- [ ] Runner shows as "Idle" in GitHub
+- [ ] Can successfully ping Proxmox API
+- [ ] Packer commands execute successfully
+- [ ] Test workflow completes successfully
+- [ ] Service starts automatically on reboot
+- [ ] Logs are accessible and understandable
+- [ ] Firewall rules are properly configured
+- [ ] Security best practices implemented
+
 ---
 
-**Once the self-hosted runner is set up, the GitHub Actions workflow will work perfectly!** 🚀
+**Note**: A properly configured self-hosted runner should require minimal maintenance once set up. Monitor it periodically, keep it updated, and it will reliably execute your GitHub Actions workflows with access to your private infrastructure.
