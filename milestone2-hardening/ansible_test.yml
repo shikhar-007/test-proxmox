@@ -1,0 +1,24 @@
+---
+- name: Test Ansible connectivity to STIG template
+  hosts: rocky-linux-vm
+  gather_facts: no
+  tasks:
+    - name: Create test file
+      file:
+        path: /tmp/ansible_template_test.txt
+        state: touch
+        mode: '0644'
+    
+    - name: Write test message
+      copy:
+        content: "Ansible connectivity test successful - {{ ansible_date_time.iso8601 }}"
+        dest: /tmp/ansible_template_test.txt
+    
+    - name: Verify test file
+      stat:
+        path: /tmp/ansible_template_test.txt
+      register: test_file
+    
+    - name: Display test results
+      debug:
+        msg: "Test file created successfully: {{ test_file.stat.exists }}"
