@@ -18,8 +18,9 @@ variable "proxmox_password" {
 }
 
 variable "proxmox_node" {
-  description = "Proxmox node name"
+  description = "Proxmox node name (e.g., tcnhq-prxmx01, tcnhq-prxmx02, tcnhq-prxmx03)"
   type        = string
+  # No default - will prompt user during terraform apply
 }
 
 # Template Configuration
@@ -33,7 +34,7 @@ variable "template_name" {
 variable "vm_name" {
   description = "VM name (used for single VM deployments)"
   type        = string
-  default     = "rocky-linux-vm"
+  # No default - will prompt user during terraform apply
 }
 
 variable "vm_name_prefix" {
@@ -56,7 +57,7 @@ variable "vm_count" {
 variable "vm_id_start" {
   description = "Starting VM ID (subsequent VMs will increment from this)"
   type        = number
-  default     = 200
+  # No default - will prompt user during terraform apply
 }
 
 variable "vm_onboot" {
