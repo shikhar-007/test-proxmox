@@ -1,0 +1,57 @@
+# Example Terraform Variables File
+# Copy this to terraform.tfvars and customize for your environment
+
+# Proxmox Connection (REQUIRED)
+proxmox_url      = "https://74.96.90.38:8006/api2/json"
+proxmox_username = "root@pam"
+proxmox_password = "1qaz@WSX3edc$RFV"
+proxmox_node     = "tcnhq-prxmx01"
+
+# Template Configuration
+template_name = "rocky-linux-stig-manual"
+
+# VM Configuration
+vm_name        = "rocky-linux-vm-001"
+vm_name_prefix = "rocky-linux-vm"
+vm_count       = 1
+vm_id_start    = 200
+vm_onboot      = true
+
+# Hardware Configuration
+cpu_cores = 2
+memory    = 2048
+
+# Disk Configuration
+disk_size_root = "20G"
+storage_pool   = "local"
+
+# Network Configuration
+network_bridge = "vmbr0"
+vlan_tag       = "69"
+use_dhcp       = true
+
+# Static IP Configuration (if use_dhcp = false)
+# vm_ip_addresses = ["192.168.0.100", "192.168.0.101"]
+# vm_ip_netmask   = "24"
+# vm_gateway      = "192.168.0.1"
+
+# DNS Configuration
+dns_servers    = "8.8.8.8 8.8.4.4"
+search_domain  = ""
+
+# Cloud-Init Configuration
+cloud_init_user     = "rocky"
+cloud_init_password = "My!temp@123#456"
+ssh_public_keys     = ""
+
+# Ansible Configuration
+generate_ansible_inventory = true
+run_ansible_verification   = true
+
+# Tags
+tags = {
+  environment     = "production"
+  managed_by      = "terraform"
+  stig_compliant  = "true"
+  deployed_by     = "devops-team"
+}

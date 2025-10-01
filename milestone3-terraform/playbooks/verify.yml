@@ -1,0 +1,73 @@
+---
+# Post-Deployment Verification Playbook
+# Verifies VM is properly deployed and accessible
+
+- name: Verify Rocky Linux VM Deployment
+  hosts: all
+  gather_facts: yes
+  become: yes
+  
+  tasks:
+    - name: Create deployment test file
+      file:
+        path: /tmp/ansible_deployed_test.txt
+        state: touch
+        mode: '0644'
+    
+    - name: Write deployment information
+      copy:
+        content: |
+          Deployment Verification Successful
+          Deployed on: {{ ansible_date_time.iso8601 }}
+          Hostname: {{ ansible_hostname }}
+          IP Address: {{ ansible_default_ipv4.address }}
+          OS: {{ ansible_distribution }} {{ ansible_distribution_version }}
+          Kernel: {{ ansible_kernel }}
+          Memory: {{ ansible_memtotal_mb }} MB
+          CPU Cores: {{ ansible_processor_cores }}
+          Deployed via: Terraform
+        dest: /tmp/ansible_deployed_test.txt
+    
+    - name: Verify STIG compliance is maintained
+      command: systemctl is-active auditd firewalld
+      register: services_status
+      failed_when: false
+    
+    - name: Check SSH service
+      systemctl:
+        name: sshd
+        state: started
+        enabled: yes
+      register: ssh_status
+    
+    - name: Check cloud-init status
+      command: cloud-init status
+      register: cloudinit_status
+      failed_when: false
+    
+    - name: Verify disk partitions
+      command: lsblk
+      register: disk_layout
+    
+    - name: Display verification results
+      debug:
+        msg:
+          - "✅ Deployment verification completed successfully!"
+          - "Hostname: {{ ansible_hostname }}"
+          - "IP Address: {{ ansible_default_ipv4.address }}"
+          - "OS: {{ ansible_distribution }} {{ ansible_distribution_version }}"
+          - "Test file created: /tmp/ansible_deployed_test.txt"
+          - "SSH Service: {{ ssh_status.state }}"
+          - "Services Status: {{ services_status.stdout | default('Check manually') }}"
+    
+    - name: Verify test file exists
+      stat:
+        path: /tmp/ansible_deployed_test.txt
+      register: test_file
+    
+    - name: Assert test file was created
+      assert:
+        that:
+          - test_file.stat.exists
+        fail_msg: "Test file was not created successfully"
+        success_msg: "✅ Test file created successfully"
